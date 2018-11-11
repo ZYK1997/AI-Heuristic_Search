@@ -4,10 +4,14 @@ Heuristic Search
 
 using DataStructures
 using Random
+import GR
+import Plots
+import JSON
 
-N = 4
 
-puzzle_15 = UInt[11 3 1 7; 4 6 8 2; 15 9 10 13; 14 12 5 0]
+N = 3
+
+# puzzle_15 = UInt[11 3 1 7; 4 6 8 2; 15 9 10 13; 14 12 5 0]
 
 function encode(a::Array{UInt, 2})::UInt
     s::UInt = 0
@@ -18,7 +22,7 @@ function encode(a::Array{UInt, 2})::UInt
     s
 end
 
-encode(puzzle_15)
+# encode(puzzle_15)
 
 function getValue(s::UInt, i::Int, j::Int)::UInt
     p = N * (i - 1) + j
@@ -29,7 +33,7 @@ function decode(s::UInt)::Array{UInt, 2}
     [getValue(s, i, j) for i=1:N, j=1:N]
 end
 
-decode(encode(puzzle_15)) == puzzle_15
+# decode(encode(puzzle_15)) == puzzle_15
 
 function generate(s::UInt)::Vector{UInt}
     function findZero()
@@ -58,17 +62,17 @@ function generate(s::UInt)::Vector{UInt}
     ret
 end
 
-generate(0xd5ce0a9f2864713b)
+# generate(0xd5ce0a9f2864713b)
 
-over_puzzle_15 = UInt[1 2 3 4; 5 6 7 8; 9 10 11 12; 13 14 15 0]
-over_state_15 = encode(over_puzzle_15)
+# over_puzzle_15 = UInt[1 2 3 4; 5 6 7 8; 9 10 11 12; 13 14 15 0]
+# over_state_15 = encode(over_puzzle_15)
 
 over_puzzle_8 = UInt[1 2 3; 4 5 6; 7 8 0]
 over_state_8 = encode(over_puzzle_8)
 
-isOver(s::UInt)::Bool = s == over_state_15
+isOver(s::UInt)::Bool = s == over_state_8
 
-isOver(over_state_15)
+isOver(over_state_8)
 
 function isConsistent(h::Function)::Bool
     if h == h1
@@ -127,6 +131,9 @@ function A_star(puzzle::Array{UInt, 2}, h::Function)
     return nothing
 end
 
+"""
+
+"""
 function IDA_star(puzzle, h)
     function dfs(x, vis, dis, limit)
         push!(vis, x)
@@ -173,9 +180,9 @@ function IDA_star(puzzle, h)
 end
 
 
-IDA_star(UInt[2 1 3; 6 7 4; 0 8 5], h1)
-
-A_star(UInt[2 1 3; 6 7 4; 0 8 5], h1)
+# IDA_star(UInt[2 1 3; 6 7 4; 0 8 5], h1)
+#
+# A_star(UInt[2 1 3; 6 7 4; 0 8 5], h1)
 
 function h1(s::UInt)::Int
     ret = 0
@@ -191,41 +198,22 @@ function h1(s::UInt)::Int
     ret
 end
 
-h1(encode(over_puzzle_15))
-h1(over_state_8)
+# h1(encode(over_puzzle_15))
+# h1(over_state_8)
 
-@time IDA_star(UInt[1 2 3 4; 5 6 7 8; 9 10 15 11; 13 0 14 12], h1)
+# @time IDA_star(UInt[1 2 3 4; 5 6 7 8; 9 10 15 11; 13 0 14 12], h1)
+#
+# @time IDA_star(puzzle_15, h1)
+#
+# puzzle = UInt64[0x0000000000000004 0x0000000000000006 0x0000000000000007;
+#     0x0000000000000001 0x0000000000000000 0x0000000000000005;
+#     0x0000000000000008 0x0000000000000003 0x0000000000000002]
+#
+# BFS(puzzle)
+# IDA_star(puzzle, h1)
+# A_star(puzzle, h1)
 
-@time IDA_star(puzzle_15, h1)
 
-puzzle = UInt64[0x0000000000000004 0x0000000000000006 0x0000000000000007;
-    0x0000000000000001 0x0000000000000000 0x0000000000000005;
-    0x0000000000000008 0x0000000000000003 0x0000000000000002]
-
-BFS(puzzle)
-IDA_star(puzzle, h1)
-A_star(puzzle, h1)
-
-"""
-
-"""
-let
-    id = 0
-    while true
-        id += 1
-        println(id)
-        puzzle = shuffle(UInt[1 2 3; 4 5 6; 7 8 0])
-        b = BFS(puzzle)
-        if b == nothing
-            continue
-        end
-        a, c = A_star(puzzle, h1), IDA_star(puzzle, h1)
-        if a[1] != b[1] || c[1] != b[1]
-            @show puzzle
-            break
-        end
-    end
-end
 
 function BFS(puzzle)
     Q = Queue{Tuple{UInt, Int}}()
@@ -251,9 +239,65 @@ function BFS(puzzle)
     return nothing
 end
 
+"""
+
+"""
+data = let
+    data = []
+    num = 1
+    while true
+        puzzle = shuffle(UInt[1 2 3; 4 5 6; 7 8 0])
+        b = BFS(puzzle)
+        if b == nothing
+            continue
+        end
+        push!(data, puzzle)
+        num += 1
+        @show num
+        if num > 100
+            break
+        end
+    end
+    data
+end
+
+open("data.json", "w") do f
+    s = JSON.json(data)
+    print(f, s)
+end
+
+data = open("data.json", "r") do f
+    s = readline(f)
+    d = JSON.parse(s, inttype = UInt)
+    map(t -> [t[1] t[2] t[3]], d)
+end
+
+"""
+
+"""
+Y = let
+    global data
+    Y = map(data) do puzzle
+        b = BFS(puzzle)
+        a, c = A_star(puzzle, h1), IDA_star(puzzle, h1)
+        if a[1] != b[1] || c[1] != b[1]
+            @show puzzle
+        end
+        b[2], a[2], c[2]
+    end
+    Y
+end
+
+open("result.json", "w") do f
+    s = JSON.json(Y)
+    print(f, s)
+end
 
 let
-    q = PriorityQueue()
-    enqueue!(q, (1, 2)=>1)
-    haskey(q, (1, 3))
+    y1 = [Y[i][1] for i=1:100]
+    y2 = [Y[i][2] for i=1:100]
+    y3 = [Y[i][3] for i=1:100]
+    plot(1:100, [y1, y2, y3], label=["BFS", "A*", "IDA*"])
 end
+
+Plots.plot(-10:0.1:10, [sin, cos])

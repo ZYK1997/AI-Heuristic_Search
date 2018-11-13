@@ -4,7 +4,6 @@ Heuristic Search
 
 using DataStructures
 using Random
-import GR
 import Plots
 import JSON
 
@@ -77,6 +76,10 @@ isOver(over_state_8)
 function isConsistent(h::Function)::Bool
     if h == h1
         return false
+    elseif h == h2
+        return false
+    elseif h == h3
+        return true
     end
     return false
 end
@@ -198,6 +201,34 @@ function h1(s::UInt)::Int
     ret
 end
 
+function h2(s::UInt)::Int
+    ret = 0
+    for i=1:N, j=1:N
+        val = getValue(s, i, j)
+        if val == 0
+            ret += ceil(Int, sqrt((i - N)^2 + (j - N)^2))
+        else
+            x::Int, y::Int = div(val - 1, N) + 1, (val - 1) % N + 1
+            ret += ceil(Int, sqrt((i - x)^2 + (j - y)^2))
+        end
+    end
+    ret
+end
+
+function h3(s::UInt)::Int
+    ret = 0
+    for i=1:N, j=1:N
+        val = getValue(s, i, j)
+        if val == 0
+            ret += max(abs(i - N), abs(j - N))
+        else
+            x::Int, y::Int = div(val - 1, N) + 1, (val - 1) % N + 1
+            ret += max(abs(i - x), abs(j - y))
+        end
+    end
+    ret
+end
+
 # h1(encode(over_puzzle_15))
 # h1(over_state_8)
 
@@ -214,7 +245,9 @@ end
 # A_star(puzzle, h1)
 
 
+"""
 
+"""
 function BFS(puzzle)
     Q = Queue{Tuple{UInt, Int}}()
     vis = Set{UInt}()
@@ -297,7 +330,57 @@ let
     y1 = [Y[i][1] for i=1:100]
     y2 = [Y[i][2] for i=1:100]
     y3 = [Y[i][3] for i=1:100]
-    plot(1:100, [y1, y2, y3], label=["BFS", "A*", "IDA*"])
+    fig = Plots.plot(1:100, [y1, y2, y3], label=["BFS", "A*", "IDA*"])
+    Plots.xlabel!("Sample")
+    Plots.ylabel!("total")
+    Plots.title!("Different Algorithms with h1")
+    Plots.savefig(fig, "result.png")
+    fig
 end
 
-Plots.plot(-10:0.1:10, [sin, cos])
+
+Y2 = let
+    global data
+    map(data) do puzzle
+        a, b, c = A_star(puzzle, h1), A_star(puzzle, h2), A_star(puzzle, h3)
+        if a[1] != b[1] || c[1] != b[1] || a[1] != c[1]
+            @show puzzle
+        end
+        a[2], b[2], c[2]
+    end
+end
+
+let
+    y1 = [Y2[i][1] for i=1:100]
+    y2 = [Y2[i][2] for i=1:100]
+    y3 = [Y2[i][3] for i=1:100]
+    fig = Plots.plot(1:100, [y1, y2, y3], label=["h1", "h2", "h3"])
+    Plots.xlabel!("Sample")
+    Plots.ylabel!("total")
+    Plots.title!("A* with h1, h2 and h3")
+    Plots.savefig(fig, "A_star.png")
+    fig
+end
+
+Y3 = let
+    global data
+    map(data) do puzzle
+        a, b, c = IDA_star(puzzle, h1), IDA_star(puzzle, h2), IDA_star(puzzle, h3)
+        if a[1] != b[1] || a[1] != c[1]
+            @show puzzle
+        end
+        a[2], b[2], c[2]
+    end
+end
+
+let
+    y1 = [Y3[i][1] for i=1:100]
+    y2 = [Y3[i][2] for i=1:100]
+    y3 = [Y3[i][3] for i=1:100]
+    fig = Plots.plot(1:100, [y1, y2, y3], label=["h1", "h2", "h3"])
+    Plots.xlabel!("Sample")
+    Plots.ylabel!("total")
+    Plots.title!("IDA* with h1, h2 and h3")
+    Plots.savefig(fig, "IDA_star.png")
+    fig
+end
